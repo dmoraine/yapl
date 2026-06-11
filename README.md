@@ -11,6 +11,11 @@
 ![No trackers](https://img.shields.io/badge/trackers-none-success.svg)
 ![No network](https://img.shields.io/badge/network-none-success.svg)
 
+<a href="https://f-droid.org/packages/be.moraine.yapl/">
+<img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png" alt="Get it on F-Droid" height="80"></a>
+
+<sub>F-Droid listing pending review.</sub>
+
 </div>
 
 YAPL is a flight logbook built for professional and general-aviation pilots who
