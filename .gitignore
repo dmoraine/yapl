@@ -1,0 +1,42 @@
+# ── Build output ──────────────────────────────────────────────────────────────
+/build
+/captures
+build/
+.gradle/
+.kotlin/
+bin/
+gen/
+out/
+release/
+*.apk
+*.aab
+.externalNativeBuild
+.cxx
+
+# ── Local config (never commit) ───────────────────────────────────────────────
+local.properties
+/local.properties
+
+# ── Signing / secrets (never commit) ──────────────────────────────────────────
+keystore.properties
+*.jks
+*.keystore
+google-services.json
+
+# ── IDE ───────────────────────────────────────────────────────────────────────
+*.iml
+*.iws
+*.ipr
+/.idea
+.idea/
+*.orig
+.DS_Store
+
+# ── Personal data — NEVER publish ─────────────────────────────────────────────
+# `legacy/` holds the maintainer's real flight history, paper-logbook scans and
+# one-off migration tooling. It stays on disk for personal use but must never be
+# committed. Likewise any exported logbook data.
+legacy/
+*-flights.csv
+pilotlog-flights*.csv
+yapl-logbook*.pdf

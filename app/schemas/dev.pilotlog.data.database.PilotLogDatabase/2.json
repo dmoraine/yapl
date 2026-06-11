@@ -1,0 +1,405 @@
+{
+  "formatVersion": 1,
+  "database": {
+    "version": 2,
+    "identityHash": "f03faaf44fae9463287ba2405212497f",
+    "entities": [
+      {
+        "tableName": "flights",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `date` TEXT NOT NULL, `dep_airport` TEXT NOT NULL, `dep_time` TEXT NOT NULL, `arr_airport` TEXT NOT NULL, `arr_time` TEXT NOT NULL, `ac_type` TEXT NOT NULL, `ac_registration` TEXT NOT NULL, `total_min` INTEGER NOT NULL, `night_min` INTEGER NOT NULL, `ifr_min` INTEGER NOT NULL, `pic_min` INTEGER NOT NULL, `copilot_min` INTEGER NOT NULL, `dual_min` INTEGER NOT NULL, `instructor_min` INTEGER NOT NULL, `takeoffs_day` INTEGER NOT NULL, `takeoffs_night` INTEGER NOT NULL, `landings_day` INTEGER NOT NULL, `landings_night` INTEGER NOT NULL, `is_multi_pilot` INTEGER NOT NULL, `flight_number` TEXT NOT NULL, `remarks` TEXT NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "date",
+            "columnName": "date",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "depAirport",
+            "columnName": "dep_airport",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "depTime",
+            "columnName": "dep_time",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "arrAirport",
+            "columnName": "arr_airport",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "arrTime",
+            "columnName": "arr_time",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "acType",
+            "columnName": "ac_type",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "acRegistration",
+            "columnName": "ac_registration",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "totalMin",
+            "columnName": "total_min",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "nightMin",
+            "columnName": "night_min",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "ifrMin",
+            "columnName": "ifr_min",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "picMin",
+            "columnName": "pic_min",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "copilotMin",
+            "columnName": "copilot_min",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "dualMin",
+            "columnName": "dual_min",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "instructorMin",
+            "columnName": "instructor_min",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "takeoffsDay",
+            "columnName": "takeoffs_day",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "takeoffsNight",
+            "columnName": "takeoffs_night",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "landingsDay",
+            "columnName": "landings_day",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "landingsNight",
+            "columnName": "landings_night",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isMultiPilot",
+            "columnName": "is_multi_pilot",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "flightNumber",
+            "columnName": "flight_number",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "remarks",
+            "columnName": "remarks",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "aircraft",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `type_code` TEXT NOT NULL, `type_name` TEXT NOT NULL, `registration` TEXT NOT NULL, `engine_type` TEXT NOT NULL)",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "typeCode",
+            "columnName": "type_code",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "typeName",
+            "columnName": "type_name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "registration",
+            "columnName": "registration",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "engineType",
+            "columnName": "engine_type",
+            "affinity": "TEXT",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": true,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_aircraft_registration",
+            "unique": true,
+            "columnNames": [
+              "registration"
+            ],
+            "orders": [],
+            "createSql": "CREATE UNIQUE INDEX IF NOT EXISTS `index_aircraft_registration` ON `${TABLE_NAME}` (`registration`)"
+          }
+        ],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "airports",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`icao` TEXT NOT NULL, `iata` TEXT NOT NULL, `name` TEXT NOT NULL, `municipality` TEXT NOT NULL, `country` TEXT NOT NULL, `latitude` REAL, `longitude` REAL, `elevation_ft` INTEGER, `timezone` TEXT NOT NULL, `is_custom` INTEGER NOT NULL, PRIMARY KEY(`icao`))",
+        "fields": [
+          {
+            "fieldPath": "icao",
+            "columnName": "icao",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "iata",
+            "columnName": "iata",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "name",
+            "columnName": "name",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "municipality",
+            "columnName": "municipality",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "country",
+            "columnName": "country",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "latitude",
+            "columnName": "latitude",
+            "affinity": "REAL",
+            "notNull": false
+          },
+          {
+            "fieldPath": "longitude",
+            "columnName": "longitude",
+            "affinity": "REAL",
+            "notNull": false
+          },
+          {
+            "fieldPath": "elevationFt",
+            "columnName": "elevation_ft",
+            "affinity": "INTEGER",
+            "notNull": false
+          },
+          {
+            "fieldPath": "timezone",
+            "columnName": "timezone",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "isCustom",
+            "columnName": "is_custom",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "icao"
+          ]
+        },
+        "indices": [
+          {
+            "name": "index_airports_icao",
+            "unique": false,
+            "columnNames": [
+              "icao"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_airports_icao` ON `${TABLE_NAME}` (`icao`)"
+          },
+          {
+            "name": "index_airports_iata",
+            "unique": false,
+            "columnNames": [
+              "iata"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_airports_iata` ON `${TABLE_NAME}` (`iata`)"
+          },
+          {
+            "name": "index_airports_name",
+            "unique": false,
+            "columnNames": [
+              "name"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_airports_name` ON `${TABLE_NAME}` (`name`)"
+          },
+          {
+            "name": "index_airports_municipality",
+            "unique": false,
+            "columnNames": [
+              "municipality"
+            ],
+            "orders": [],
+            "createSql": "CREATE INDEX IF NOT EXISTS `index_airports_municipality` ON `${TABLE_NAME}` (`municipality`)"
+          }
+        ],
+        "foreignKeys": []
+      },
+      {
+        "tableName": "previous_totals",
+        "createSql": "CREATE TABLE IF NOT EXISTS `${TABLE_NAME}` (`id` INTEGER NOT NULL, `as_of` TEXT NOT NULL, `total_min` INTEGER NOT NULL, `night_min` INTEGER NOT NULL, `ifr_min` INTEGER NOT NULL, `pic_min` INTEGER NOT NULL, `copilot_min` INTEGER NOT NULL, `dual_min` INTEGER NOT NULL, `instructor_min` INTEGER NOT NULL, `total_landings` INTEGER NOT NULL, `total_takeoffs` INTEGER NOT NULL, PRIMARY KEY(`id`))",
+        "fields": [
+          {
+            "fieldPath": "id",
+            "columnName": "id",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "asOf",
+            "columnName": "as_of",
+            "affinity": "TEXT",
+            "notNull": true
+          },
+          {
+            "fieldPath": "totalMin",
+            "columnName": "total_min",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "nightMin",
+            "columnName": "night_min",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "ifrMin",
+            "columnName": "ifr_min",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "picMin",
+            "columnName": "pic_min",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "copilotMin",
+            "columnName": "copilot_min",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "dualMin",
+            "columnName": "dual_min",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "instructorMin",
+            "columnName": "instructor_min",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "totalLandings",
+            "columnName": "total_landings",
+            "affinity": "INTEGER",
+            "notNull": true
+          },
+          {
+            "fieldPath": "totalTakeoffs",
+            "columnName": "total_takeoffs",
+            "affinity": "INTEGER",
+            "notNull": true
+          }
+        ],
+        "primaryKey": {
+          "autoGenerate": false,
+          "columnNames": [
+            "id"
+          ]
+        },
+        "indices": [],
+        "foreignKeys": []
+      }
+    ],
+    "views": [],
+    "setupQueries": [
+      "CREATE TABLE IF NOT EXISTS room_master_table (id INTEGER PRIMARY KEY,identity_hash TEXT)",
+      "INSERT OR REPLACE INTO room_master_table (id,identity_hash) VALUES(42, 'f03faaf44fae9463287ba2405212497f')"
+    ]
+  }
+}

@@ -1,0 +1,3 @@
+First public release of YAPL.
+
+Log flights with automatic night-time computation, browse a month-grouped logbook, track statistics and aircraft, and export an EASA/BCAA paper-logbook PDF with page breaks and per-page totals. Fully offline — no permissions, no trackers.

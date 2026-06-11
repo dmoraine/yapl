@@ -1,0 +1,1 @@
+Private, offline flight logbook with EASA/BCAA paper-logbook PDF export.
