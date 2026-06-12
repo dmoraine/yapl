@@ -4,7 +4,9 @@ License: GPL-3.0-only
 AuthorName: Didier Moraine
 SourceCode: https://github.com/dmoraine/yapl
 IssueTracker: https://github.com/dmoraine/yapl/issues
-Changelog: https://github.com/dmoraine/yapl/blob/main/CHANGELOG.md
+Changelog: https://github.com/dmoraine/yapl/blob/HEAD/CHANGELOG.md
+
+AutoName: YAPL
 
 RepoType: git
 Repo: https://github.com/dmoraine/yapl.git
@@ -17,7 +19,7 @@ Builds:
     gradle:
       - yes
 
-AutoUpdateMode: Version v%v
+AutoUpdateMode: Version
 UpdateCheckMode: Tags
 CurrentVersion: 1.0.0
 CurrentVersionCode: 1
