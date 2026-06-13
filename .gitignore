@@ -23,6 +23,9 @@ keystore.properties
 *.keystore
 google-services.json
 
+# ── Local tooling (Claude Code skills/settings — may reference local paths) ───
+/.claude/
+
 # ── IDE ───────────────────────────────────────────────────────────────────────
 *.iml
 *.iws
