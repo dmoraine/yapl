@@ -11,6 +11,7 @@ interface FlightRepository {
     fun getFlights(): Flow<List<Flight>>
     fun getFlightsByDateRange(from: LocalDate, to: LocalDate): Flow<List<Flight>>
     suspend fun getFlightById(id: Long): Flight?
+    fun getFlightByIdFlow(id: Long): Flow<Flight?>
     suspend fun getMostRecentFlight(): Flight?
     suspend fun insertFlight(flight: Flight): Long
     suspend fun updateFlight(flight: Flight)

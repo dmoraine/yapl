@@ -22,6 +22,9 @@ interface FlightDao {
     @Query("SELECT * FROM flights WHERE id = :id LIMIT 1")
     suspend fun getById(id: Long): FlightEntity?
 
+    @Query("SELECT * FROM flights WHERE id = :id LIMIT 1")
+    fun getByIdFlow(id: Long): Flow<FlightEntity?>
+
     @Query("SELECT * FROM flights ORDER BY date DESC, arr_time DESC LIMIT 1")
     suspend fun getMostRecent(): FlightEntity?
 

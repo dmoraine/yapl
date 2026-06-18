@@ -10,9 +10,10 @@ import dev.pilotlog.domain.model.Flight
 import dev.pilotlog.domain.usecase.flight.DeleteFlightUseCase
 import dev.pilotlog.domain.repository.FlightRepository
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -31,20 +32,26 @@ class FlightDetailViewModel @Inject constructor(
 
     private val flightId: Long = checkNotNull(savedStateHandle["flightId"])
 
-    private val _state = MutableStateFlow(FlightDetailUiState())
-    val state: StateFlow<FlightDetailUiState> = _state.asStateFlow()
+    // Local one-shot signal: the reactive flight Flow emits null once the row is
+    // deleted, which is indistinguishable from "not found". Keep deletion separate
+    // so the screen can navigate away instead of rendering an empty detail.
+    private val deletedSignal = MutableStateFlow(false)
 
-    init {
-        viewModelScope.launch {
-            val flight = flightRepository.getFlightById(flightId)
-            _state.update { it.copy(flight = flight, isLoading = false) }
-        }
-    }
+    // Observe the flight reactively so edits made on the Add/Edit screen are
+    // reflected here as soon as Room emits, without recreating this ViewModel.
+    val state: StateFlow<FlightDetailUiState> =
+        combine(flightRepository.getFlightByIdFlow(flightId), deletedSignal) { flight, deleted ->
+            FlightDetailUiState(flight = flight, isLoading = false, deleted = deleted)
+        }.stateIn(
+            viewModelScope,
+            SharingStarted.WhileSubscribed(5_000),
+            FlightDetailUiState(isLoading = true),
+        )
 
     fun delete() {
         viewModelScope.launch {
             deleteFlight(flightId)
-            _state.update { it.copy(deleted = true) }
+            deletedSignal.value = true
         }
     }
 }

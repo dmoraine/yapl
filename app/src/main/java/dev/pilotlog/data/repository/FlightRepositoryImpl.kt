@@ -27,6 +27,9 @@ class FlightRepositoryImpl @Inject constructor(
     override suspend fun getFlightById(id: Long): Flight? =
         dao.getById(id)?.toDomain()
 
+    override fun getFlightByIdFlow(id: Long): Flow<Flight?> =
+        dao.getByIdFlow(id).map { it?.toDomain() }
+
     override suspend fun getMostRecentFlight(): Flight? =
         dao.getMostRecent()?.toDomain()
 
