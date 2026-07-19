@@ -147,17 +147,38 @@ class AddEditFlightViewModel @Inject constructor(
             // last flight is recent — after more than 3 idle days, fall back to home base.
             val today = Clock.System.todayIn(TimeZone.currentSystemDefault())
             val lastFlight = flightRepository.getMostRecentFlight()
-            val lastArrival = lastFlight
+            val recentFlight = lastFlight
                 ?.takeIf { it.date.daysUntil(today) <= MAX_TURNAROUND_DAYS }
-                ?.arrivalAirport
-            val depIcao = (lastArrival ?: settings.homeBase).trim().uppercase()
+            val depIcao = (recentFlight?.arrivalAirport ?: settings.homeBase).trim().uppercase()
             val depAirport = depIcao.takeIf { it.isNotBlank() }?.let { getAirportByIcao(it) }
+
+            // Aircraft = the one from the last recent flight (same type & registration),
+            // so consecutive legs on the same airframe need no re-entry. Mirror
+            // onTypeSelected: load that type's registrations and its multi-crew flag.
+            val lastType = recentFlight?.aircraftType?.takeIf { it.isNotBlank() }
+            val regs = lastType?.let { registrationsFor(it) } ?: emptyList()
+            val multiPilot = lastType?.let { getAircraftType(it) }?.engineType?.let { it == EngineType.MULTI }
+
+            // Seat (CPT / F/O) persists across time, so default to the last flight's
+            // seat regardless of age. DUAL / INSTRUCTOR are too volatile to assume —
+            // for those (or no history) fall back to the configured default role.
+            val lastSeatRole = lastFlight?.let { f ->
+                when {
+                    f.picMinutes > f.copilotMinutes     -> PilotRole.PIC
+                    f.copilotMinutes > f.picMinutes     -> PilotRole.COPILOT
+                    else                                -> null
+                }
+            }
             _state.update { s ->
                 s.copy(
                     picName = settings.pilotName,
-                    activeRole = settings.defaultRole,
+                    activeRole = lastSeatRole ?: settings.defaultRole,
                     depQuery = depIcao,
                     depAirport = depAirport,
+                    aircraftType = lastType ?: s.aircraftType,
+                    registration = if (lastType != null) recentFlight.aircraftRegistration else s.registration,
+                    availableRegistrations = regs,
+                    isMultiPilot = multiPilot ?: s.isMultiPilot,
                 ).recomputeOps()
             }
         }
