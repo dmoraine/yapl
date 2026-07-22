@@ -50,6 +50,11 @@ Hilt for DI, Room for persistence, `kotlinx-datetime` for dates.
   bundled asset with `python3 scripts/build_airports_db.py` (its `user_version` must
   match the DB version). The asset ships **airports only — no aircraft seed** (empty
   hangar); never re-add personal aircraft to the seed.
+- **Airport data fixes:** `createFromAsset` only runs when the DB is first created, so
+  editing `airports.db` alone reaches nobody who already has the app. After
+  regenerating the asset, **bump `AirportDataRefresher.ASSET_DATA_VERSION`** — that is
+  what replays it into existing installs on the next launch. The replay deletes and
+  re-inserts only `is_custom = 0` rows, so user-created/edited airports always win.
 - **New `.kt` files** start with `// SPDX-License-Identifier: GPL-3.0-only`.
 - **Pure logic** (e.g. `domain/logbook/LogbookPaging.kt`) is unit-tested — add tests
   for new domain logic.
