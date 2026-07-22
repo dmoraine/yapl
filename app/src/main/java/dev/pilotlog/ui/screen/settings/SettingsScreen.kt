@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -105,7 +106,12 @@ fun SettingsScreen(
         },
         contentWindowInsets = WindowInsets(0),
     ) { innerPadding ->
-        Column(modifier = Modifier.padding(innerPadding).verticalScroll(rememberScrollState())) {
+        Column(
+            modifier = Modifier
+                .padding(innerPadding)
+                .navigationBarsPadding()
+                .verticalScroll(rememberScrollState()),
+        ) {
             SectionHeader("Profile")
 
             Column(modifier = Modifier.padding(horizontal = 16.dp)) {
