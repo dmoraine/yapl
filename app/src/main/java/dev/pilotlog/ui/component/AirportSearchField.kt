@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddLocationAlt
 import androidx.compose.material3.DropdownMenuItem
@@ -26,6 +27,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.unit.dp
 import dev.pilotlog.domain.model.Airport
 
@@ -39,11 +41,15 @@ fun AirportSearchField(
     label: String,
     modifier: Modifier = Modifier,
     isError: Boolean = false,
-    hasSelection: Boolean = false,
+    selected: Airport? = null,
     onAddAirport: (() -> Unit)? = null,
 ) {
     // Offer "add airport" only while actively searching an unmatched query.
-    val showAddRow = onAddAirport != null && query.trim().length >= 2 && !hasSelection
+    val showAddRow = onAddAirport != null && query.trim().length >= 2 && selected == null
+    // A resolved code closes the dropdown silently, so name the match under the field —
+    // otherwise "found it" and "cannot create it" look identical to the user.
+    val resolved = selected?.let { "${it.name}, ${it.country}" }
+    val unmatched = selected == null && suggestions.isEmpty() && query.trim().length >= 2
     var expanded by remember { mutableStateOf(false) }
     expanded = suggestions.isNotEmpty() || showAddRow
 
@@ -55,11 +61,24 @@ fun AirportSearchField(
         OutlinedTextField(
             value = query,
             onValueChange = {
-                onQueryChange(it)
-                if (it.isBlank()) expanded = false
+                // Codes are uppercase by convention and the search uppercases anyway,
+                // so echo back what is actually being looked up.
+                val typed = it.uppercase()
+                onQueryChange(typed)
+                if (typed.isBlank()) expanded = false
             },
             label = { Text(label) },
             placeholder = { Text("ICAO / IATA / name") },
+            supportingText = when {
+                resolved != null -> {
+                    { Text(resolved, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                }
+                unmatched -> {
+                    { Text("Unknown code - tap to add it", color = MaterialTheme.colorScheme.error) }
+                }
+                else -> null
+            },
+            keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Characters),
             singleLine = true,
             isError = isError,
             modifier = Modifier

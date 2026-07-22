@@ -152,7 +152,7 @@ fun AddEditFlightScreen(
                 suggestions = state.depSuggestions,
                 onAirportSelected = viewModel::onDepAirportSelected,
                 label = "Departure",
-                hasSelection = state.depAirport != null,
+                selected = state.depAirport,
                 onAddAirport = { addAirportTarget = AirportTarget.DEPARTURE },
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -178,7 +178,7 @@ fun AddEditFlightScreen(
                 suggestions = state.arrSuggestions,
                 onAirportSelected = viewModel::onArrAirportSelected,
                 label = "Arrival",
-                hasSelection = state.arrAirport != null,
+                selected = state.arrAirport,
                 onAddAirport = { addAirportTarget = AirportTarget.ARRIVAL },
                 modifier = Modifier.fillMaxWidth(),
             )
