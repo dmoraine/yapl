@@ -90,8 +90,10 @@ data class FlightFormState(
     val landingsNight: Int = 0,
     val takeoffByMe: Boolean = true,
     val landingByMe: Boolean = true,
-    // Set once the pilot enters counts himself (circuits, multiple legs logged as one
-    // line): the automatic day/night classification then stops overwriting them.
+    // Set once the counts did not come from the automatic day/night classification, which
+    // then stops overwriting them. Landings get there through the form (circuits); the
+    // form does not log take-off counts — BCAA asks for landings — so takeoffsManual only
+    // ever guards values that arrived by CSV import.
     val takeoffsManual: Boolean = false,
     val landingsManual: Boolean = false,
     val depIsNight: Boolean? = null,   // null = unknown (no coords / no time yet)
@@ -416,14 +418,6 @@ class AddEditFlightViewModel @Inject constructor(
 
     fun onLandingByMeChange(v: Boolean) =
         _state.update { it.copy(landingByMe = v, landingsManual = false).recomputeOps() }
-
-    fun onTakeoffCountsChange(day: Int, night: Int) = _state.update {
-        it.copy(
-            takeoffsDay = day.coerceIn(0, MAX_OPS),
-            takeoffsNight = night.coerceIn(0, MAX_OPS),
-            takeoffsManual = true,
-        )
-    }
 
     fun onLandingCountsChange(day: Int, night: Int) = _state.update {
         it.copy(

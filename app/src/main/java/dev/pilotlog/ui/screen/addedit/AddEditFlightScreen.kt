@@ -21,6 +21,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.ArrowDropUp
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.NightsStay
 import androidx.compose.material.icons.filled.Refresh
@@ -297,7 +298,6 @@ fun AddEditFlightScreen(
                 onChange = viewModel::onTakeoffByMeChange,
                 day = state.takeoffsDay,
                 night = state.takeoffsNight,
-                onCountsChange = viewModel::onTakeoffCountsChange,
             )
             Spacer(Modifier.height(4.dp))
             OperationToggle(
@@ -636,28 +636,40 @@ private fun OperationToggle(
     onChange: (Boolean) -> Unit,
     day: Int,
     night: Int,
-    onCountsChange: (Int, Int) -> Unit,
+    // Null where counts are not logged (BCAA asks for landings only): the row then
+    // behaves as a plain switch, though stored counts are still displayed if present.
+    onCountsChange: ((Int, Int) -> Unit)? = null,
 ) {
-    // Airline flying is one take-off and one landing, so the counters stay folded away
-    // until asked for — or until the stored counts can only have come from circuits.
+    // Airline flying is one landing, so the counters stay folded away until asked for
+    // — or until the stored counts can only have come from circuits.
     var expanded by remember { mutableStateOf(false) }
-    val showCounters = byMe && (expanded || day + night > 1)
+    val canCount = onCountsChange != null && byMe
+    val showCounters = canCount && (expanded || day + night > 1)
 
     Column(modifier = Modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text(label, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-            if (byMe) {
-                val isNightOp = isNight == true
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier
-                        .clip(MaterialTheme.shapes.small)
-                        .clickable { expanded = !expanded }
-                        .padding(horizontal = 6.dp, vertical = 4.dp),
-                ) {
+            // The whole row up to the switch opens the counters, with a chevron to say
+            // so: a bare day/night chip was a 165 px target nobody thought to press.
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier
+                    .weight(1f)
+                    .clip(MaterialTheme.shapes.small)
+                    .then(
+                        if (canCount) Modifier.clickable { expanded = !expanded } else Modifier,
+                    )
+                    .padding(vertical = 4.dp),
+            ) {
+                Text(
+                    label,
+                    style = MaterialTheme.typography.bodyMedium,
+                    modifier = Modifier.weight(1f),
+                )
+                if (byMe) {
+                    val isNightOp = isNight == true
                     Icon(
                         imageVector = if (isNightOp) Icons.Filled.NightsStay else Icons.Filled.WbSunny,
                         contentDescription = null,
@@ -672,9 +684,19 @@ private fun OperationToggle(
                         style = MaterialTheme.typography.bodyMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
+                    if (canCount) {
+                        Icon(
+                            imageVector = if (expanded) Icons.Filled.ArrowDropUp
+                            else Icons.Filled.ArrowDropDown,
+                            contentDescription = if (expanded) "Hide landing counts"
+                            else "Show landing counts",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(22.dp),
+                        )
+                    }
                 }
-                Spacer(Modifier.width(12.dp))
             }
+            Spacer(Modifier.width(12.dp))
             Switch(checked = byMe, onCheckedChange = onChange)
         }
         if (showCounters) {
@@ -684,8 +706,8 @@ private fun OperationToggle(
                     .padding(start = 8.dp, top = 4.dp, bottom = 4.dp),
                 horizontalArrangement = Arrangement.spacedBy(20.dp),
             ) {
-                CountStepper("Day", day) { onCountsChange(it, night) }
-                CountStepper("Night", night) { onCountsChange(day, it) }
+                CountStepper("Day", day) { onCountsChange?.invoke(it, night) }
+                CountStepper("Night", night) { onCountsChange?.invoke(day, it) }
             }
         }
     }
