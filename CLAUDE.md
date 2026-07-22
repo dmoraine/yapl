@@ -49,12 +49,24 @@ Hilt for DI, Room for persistence, `kotlinx-datetime` for dates.
   `DatabaseModule`, keep the exported schema in `app/schemas/`, then regenerate the
   bundled asset with `python3 scripts/build_airports_db.py` (its `user_version` must
   match the DB version). The asset ships **airports only — no aircraft seed** (empty
-  hangar); never re-add personal aircraft to the seed.
-- **Airport data fixes:** `createFromAsset` only runs when the DB is first created, so
-  editing `airports.db` alone reaches nobody who already has the app. After
-  regenerating the asset, **bump `AirportDataRefresher.ASSET_DATA_VERSION`** — that is
-  what replays it into existing installs on the next launch. The replay deletes and
-  re-inserts only `is_custom = 0` rows, so user-created/edited airports always win.
+  hangar); never re-add personal aircraft to the seed — the script now aborts and
+  deletes its output if either aircraft table comes out non-empty.
+- **Airport data** comes from [OurAirports](https://ourairports.com/data/) (published
+  daily), checked in pruned as `res/airports.csv` + `res/countries.csv`. To refresh:
+  ```bash
+  curl -o res/countries.csv https://davidmegginson.github.io/ourairports-data/countries.csv
+  curl -o /tmp/airports.csv https://davidmegginson.github.io/ourairports-data/airports.csv
+  python3 scripts/build_airports_db.py --source /tmp/airports.csv --prune
+  ```
+  Kept: `large/medium/small_airport` + `seaplane_base` having a real 4-letter
+  `icao_code` (~10 k). Heliports, balloonports, closed fields and local-code-only
+  strips are dropped so they cannot bury real destinations in the search.
+- **Airport data fixes reach existing installs only via a version bump.**
+  `createFromAsset` runs when the DB is first created and never again, so editing
+  `airports.db` alone reaches nobody who already has the app. After regenerating the
+  asset, **bump `AirportDataRefresher.ASSET_DATA_VERSION`** — that is what replays it
+  on the next launch. The replay deletes and re-inserts only `is_custom = 0` rows, so
+  user-created/edited airports always win.
 - **New `.kt` files** start with `// SPDX-License-Identifier: GPL-3.0-only`.
 - **Pure logic** (e.g. `domain/logbook/LogbookPaging.kt`) is unit-tested — add tests
   for new domain logic.

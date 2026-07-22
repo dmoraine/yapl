@@ -1,14 +1,31 @@
 #!/usr/bin/env python3
 """
 Build app/src/main/assets/airports.db from:
-  - app/schemas/.../2.json  → exact Room DDL (tables + indexes)
-  - res/airports.dat        → OurAirports CSV (pre-populated airport rows)
+  - app/schemas/.../N.json   → exact Room DDL (tables + indexes)
+  - res/airports.csv         → OurAirports airport rows
+  - res/countries.csv        → OurAirports ISO country code → country name
 
 The generated DB is used via createFromAsset("airports.db").  Room copies it
 verbatim to pilotlog.db on first install, then validates every table against
 the compiled entity definitions.  The schema here MUST match Room's schema
 exactly — so we read it straight from Room's own schema-export JSON.
+
+Refreshing the data (OurAirports publishes daily):
+
+    curl -o res/countries.csv https://davidmegginson.github.io/ourairports-data/countries.csv
+    curl -o /tmp/airports.csv https://davidmegginson.github.io/ourairports-data/airports.csv
+    python3 scripts/build_airports_db.py --source /tmp/airports.csv --prune
+
+`--prune` rewrites res/airports.csv with just the rows and columns kept below,
+so the repo carries ~0.9 MB instead of the 12+ MB full feed.
+
+Then bump AirportDataRefresher.ASSET_DATA_VERSION, or existing installs keep
+the airports they already have.
+
+The asset ships AIRPORTS ONLY.  Aircraft are deliberately never seeded — the
+hangar starts empty and the maintainer's own fleet must never reach the repo.
 """
+import argparse
 import csv
 import glob
 import json
@@ -16,12 +33,28 @@ import os
 import sqlite3
 import sys
 
-ROOT        = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-AIRPORTS_DAT = os.path.join(ROOT, "res", "airports.dat")
-AIRCRAFT_SEED = os.path.join(ROOT, "res", "aircraft_seed.csv")
-DST          = os.path.join(ROOT, "app", "src", "main", "assets", "airports.db")
-SCHEMA_GLOB  = os.path.join(ROOT, "app", "schemas",
-                            "dev.pilotlog.data.database.PilotLogDatabase", "*.json")
+ROOT          = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+AIRPORTS_CSV  = os.path.join(ROOT, "res", "airports.csv")
+COUNTRIES_CSV = os.path.join(ROOT, "res", "countries.csv")
+DST           = os.path.join(ROOT, "app", "src", "main", "assets", "airports.db")
+SCHEMA_GLOB   = os.path.join(ROOT, "app", "schemas",
+                             "dev.pilotlog.data.database.PilotLogDatabase", "*.json")
+
+# Landplane/seaplane facilities only: heliports, balloonports and closed fields
+# would bury real destinations in the search results.
+KEEP_TYPES = {"large_airport", "medium_airport", "small_airport", "seaplane_base"}
+
+# Columns retained by --prune, enough to rebuild the asset offline afterwards.
+PRUNE_COLUMNS = ["ident", "type", "name", "latitude_deg", "longitude_deg",
+                 "elevation_ft", "iso_country", "municipality",
+                 "icao_code", "iata_code"]
+
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument("--source", default=AIRPORTS_CSV,
+                    help="OurAirports airports.csv (default: res/airports.csv)")
+parser.add_argument("--prune", action="store_true",
+                    help="rewrite res/airports.csv with the kept rows/columns")
+args = parser.parse_args()
 
 # ── Load Room schema ──────────────────────────────────────────────────────────
 schema_files = sorted(glob.glob(SCHEMA_GLOB))
@@ -47,29 +80,22 @@ for entity in room_schema["database"]["entities"]:
         idx_sql = idx["createSql"].replace("${TABLE_NAME}", table_name)
         ddl_statements.append(idx_sql)
 
+# ── Country code → name ───────────────────────────────────────────────────────
+if not os.path.exists(COUNTRIES_CSV):
+    sys.exit(f"Source not found: {COUNTRIES_CSV}")
+with open(COUNTRIES_CSV, encoding="utf-8", newline="") as f:
+    COUNTRIES = {r["code"].strip().upper(): r["name"].strip()
+                 for r in csv.DictReader(f) if r.get("code")}
+
 # ── Airport row parser ────────────────────────────────────────────────────────
 def parse_row(row):
-    try:
-        (
-            _id, name, city, country, iata, icao,
-            lat, lon, elev, _utc_offset, _dst, timezone,
-            airport_type, _source,
-        ) = row
-    except ValueError:
+    # icao_code is populated only where ICAO actually assigned one; ident falls
+    # back to local codes (e.g. "AK15"), which would pollute a pilot's search.
+    icao = (row.get("icao_code") or "").strip().upper()
+    if len(icao) != 4 or not icao.isalpha():
         return None
-
-    icao = icao.strip()
-    if not icao or icao == "\\N":
+    if row.get("type") not in KEEP_TYPES:
         return None
-
-    if airport_type not in (
-        "airport", "large_airport", "medium_airport",
-        "small_airport", "seaplane_base",
-    ):
-        return None
-
-    iata     = iata.strip() if iata.strip() != "\\N" else ""
-    timezone = timezone.strip() if timezone.strip() not in ("", "\\N") else "UTC"
 
     def to_float(v):
         try:    return float(v)
@@ -79,16 +105,20 @@ def parse_row(row):
         try:    return int(float(v))
         except: return None
 
+    iso = (row.get("iso_country") or "").strip().upper()
+
     return {
-        "icao":         icao.upper(),
-        "iata":         iata.upper(),
-        "name":         name.strip(),
-        "municipality": city.strip(),
-        "country":      country.strip(),
-        "latitude":     to_float(lat),
-        "longitude":    to_float(lon),
-        "elevation_ft": to_int(elev),
-        "timezone":     timezone,
+        "icao":         icao,
+        "iata":         (row.get("iata_code") or "").strip().upper(),
+        "name":         (row.get("name") or "").strip(),
+        "municipality": (row.get("municipality") or "").strip(),
+        "country":      COUNTRIES.get(iso, iso),
+        "latitude":     to_float(row.get("latitude_deg")),
+        "longitude":    to_float(row.get("longitude_deg")),
+        "elevation_ft": to_int(row.get("elevation_ft")),
+        # Never read by the app (night time comes from lat/lon, and
+        # AddAirportDialog already hardcodes "UTC"); OurAirports ships no tz.
+        "timezone":     "UTC",
         "is_custom":    0,
     }
 
@@ -109,16 +139,18 @@ for stmt in ddl_statements:
 cur.execute(f"PRAGMA user_version = {db_version}")
 
 # ── Pre-populate airports ─────────────────────────────────────────────────────
-if not os.path.exists(AIRPORTS_DAT):
-    sys.exit(f"Source not found: {AIRPORTS_DAT}")
+if not os.path.exists(args.source):
+    sys.exit(f"Source not found: {args.source}")
 
+kept_raw = []
 inserted = skipped = 0
-with open(AIRPORTS_DAT, encoding="utf-8", newline="") as f:
-    for raw_row in csv.reader(f):
+with open(args.source, encoding="utf-8", newline="") as f:
+    for raw_row in csv.DictReader(f):
         row = parse_row(raw_row)
         if row is None:
             skipped += 1
             continue
+        kept_raw.append(raw_row)
         cur.execute(
             """INSERT OR IGNORE INTO airports
                (icao, iata, name, municipality, country,
@@ -129,33 +161,6 @@ with open(AIRPORTS_DAT, encoding="utf-8", newline="") as f:
         )
         inserted += 1
 
-# ── Pre-populate aircraft (types + registrations) ─────────────────────────────
-ac_types = ac_regs = 0
-if os.path.exists(AIRCRAFT_SEED):
-    seen_types = set()
-    with open(AIRCRAFT_SEED, encoding="utf-8", newline="") as f:
-        reader = csv.DictReader(f)
-        for row in reader:
-            type_code = (row.get("type_code") or "").strip().upper()
-            type_name = (row.get("type_name") or "").strip()
-            engine    = (row.get("engine_type") or "MULTI").strip().upper()
-            reg       = (row.get("registration") or "").strip().upper()
-            if not type_code or not reg:
-                continue
-            if type_code not in seen_types:
-                seen_types.add(type_code)
-                cur.execute(
-                    """INSERT OR IGNORE INTO aircraft_types (type_code, type_name, engine_type)
-                       VALUES (?, ?, ?)""",
-                    (type_code, type_name or type_code, engine),
-                )
-                ac_types += 1
-            cur.execute(
-                "INSERT OR IGNORE INTO aircraft (registration, type_code) VALUES (?, ?)",
-                (reg, type_code),
-            )
-            ac_regs += 1
-
 con.commit()
 
 total      = cur.execute("SELECT COUNT(*) FROM airports").fetchone()[0]
@@ -164,9 +169,25 @@ tables     = [r[0] for r in cur.execute(
     "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"
 ).fetchall()]
 
+# The hangar must ship empty — a stray seed file would publish personal aircraft.
+for table in ("aircraft", "aircraft_types"):
+    count = cur.execute(f"SELECT COUNT(*) FROM {table}").fetchone()[0]
+    if count:
+        con.close()
+        os.remove(DST)
+        sys.exit(f"ABORT: {count} rows in {table} — the asset ships airports only")
+
 con.close()
+
+# ── Optionally shrink the checked-in source ───────────────────────────────────
+if args.prune:
+    with open(AIRPORTS_CSV, "w", encoding="utf-8", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=PRUNE_COLUMNS)
+        writer.writeheader()
+        for row in kept_raw:
+            writer.writerow({c: row.get(c, "") for c in PRUNE_COLUMNS})
+    print(f"Pruned source: {AIRPORTS_CSV} ({len(kept_raw)} rows)")
 
 print(f"Tables: {tables}")
 print(f"airports.db built: {total} airports ({with_coord} with coords, {skipped} skipped)")
-print(f"aircraft seeded: {ac_types} types, {ac_regs} registrations")
 print(f"Output: {DST}")

@@ -83,7 +83,7 @@ class AirportDataRefresher @Inject constructor(
          * Bump this whenever `app/src/main/assets/airports.db` is regenerated, otherwise
          * existing installs keep their current airport table.
          */
-        const val ASSET_DATA_VERSION = 1
+        const val ASSET_DATA_VERSION = 2
 
         private const val ASSET_NAME = "airports.db"
         private const val PREFS_NAME = "airport_data"
