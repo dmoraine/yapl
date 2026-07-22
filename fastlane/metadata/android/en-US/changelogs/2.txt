@@ -1,0 +1,7 @@
+Landing counts by day and night, for pilots who fly circuits — BCAA asks for the number of landings, not just who flew them. Airline flying keeps its single switch.
+
+Airport data rebuilt from OurAirports: 10023 airports, 147 IATA codes corrected (EDDB is now BER). Corrections now reach existing installs, leaving your own airports untouched.
+
+New flights prefill the aircraft and seat from the last one. The airport field names what it resolved.
+
+Removed: import from FlightLogBook backup.

@@ -25,8 +25,8 @@ android {
         applicationId = "be.moraine.yapl"
         minSdk = 26          // Android 8 — covers >97% of active devices, enables java.time
         targetSdk = 35
-        versionCode = 1
-        versionName = "1.0.0"
+        versionCode = 2
+        versionName = "1.0.1"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
