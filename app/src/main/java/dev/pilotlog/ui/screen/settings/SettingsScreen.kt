@@ -21,7 +21,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.FileOpen
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DatePicker
@@ -70,12 +69,6 @@ fun SettingsScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
     val context = LocalContext.current
     var showClearConfirm by remember { mutableStateOf(false) }
-
-    val jsonPicker = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.OpenDocument(),
-    ) { uri ->
-        if (uri != null) viewModel.importLegacyJson(context, uri)
-    }
 
     val exportFlightsLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.CreateDocument("text/csv"),
@@ -226,62 +219,7 @@ fun SettingsScreen(
             )
 
             HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-            SectionHeader("Data")
-
-            SettingsRow(
-                title = "Import from flightlogbook backup",
-                subtitle = "Pick a DB_export_FLIGHTLOGBOOK.txt file",
-                trailing = {
-                    if (state.isImporting) {
-                        CircularProgressIndicator(modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
-                    } else {
-                        OutlinedButton(
-                            onClick = { jsonPicker.launch(arrayOf("application/json", "*/*")) },
-                        ) {
-                            Icon(
-                                Icons.Filled.FileOpen,
-                                contentDescription = null,
-                                modifier = Modifier.size(18.dp),
-                            )
-                            Spacer(Modifier.width(8.dp))
-                            Text("Pick file")
-                        }
-                    }
-                },
-            )
-
-            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
         }
-    }
-
-    // Success dialog
-    state.importResult?.let { result ->
-        AlertDialog(
-            onDismissRequest = viewModel::clearResult,
-            title = { Text("Import complete") },
-            text = {
-                Text(
-                    "${result.flightsImported} flights imported\n" +
-                        "${result.aircraftImported} new aircraft added\n" +
-                        "${result.skipped} entries skipped",
-                )
-            },
-            confirmButton = {
-                TextButton(onClick = viewModel::clearResult) { Text("OK") }
-            },
-        )
-    }
-
-    // Error dialog
-    state.importError?.let { error ->
-        AlertDialog(
-            onDismissRequest = viewModel::clearResult,
-            title = { Text("Import failed") },
-            text = { Text(error) },
-            confirmButton = {
-                TextButton(onClick = viewModel::clearResult) { Text("OK") }
-            },
-        )
     }
 
     // Backup result / error dialog

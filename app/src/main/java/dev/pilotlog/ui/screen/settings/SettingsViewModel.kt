@@ -18,8 +18,6 @@ import dev.pilotlog.domain.usecase.backup.ExportLogbookPdfUseCase
 import dev.pilotlog.domain.usecase.backup.ExportReferenceJsonUseCase
 import dev.pilotlog.domain.usecase.backup.ImportFlightsCsvUseCase
 import dev.pilotlog.domain.usecase.backup.ImportReferenceJsonUseCase
-import dev.pilotlog.domain.usecase.legacy.ImportLegacyFlightsUseCase
-import dev.pilotlog.domain.usecase.legacy.ImportResult
 import dev.pilotlog.domain.usecase.maintenance.ClearAllFlightsUseCase
 import dev.pilotlog.domain.usecase.settings.GetSettingsUseCase
 import dev.pilotlog.domain.usecase.settings.SaveSettingsUseCase
@@ -35,9 +33,6 @@ data class SettingsUiState(
     val homeBaseQuery: String = "",
     val homeBaseAirport: Airport? = null,
     val homeBaseSuggestions: List<Airport> = emptyList(),
-    val isImporting: Boolean = false,
-    val importResult: ImportResult? = null,
-    val importError: String? = null,
     val isBackupBusy: Boolean = false,
     val backupMessage: String? = null,
     val backupError: String? = null,
@@ -45,7 +40,6 @@ data class SettingsUiState(
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
-    private val importLegacy: ImportLegacyFlightsUseCase,
     private val getSettings: GetSettingsUseCase,
     private val saveSettings: SaveSettingsUseCase,
     private val searchAirports: SearchAirportsUseCase,
@@ -110,25 +104,6 @@ class SettingsViewModel @Inject constructor(
         }
         persist(_state.value.settings.copy(homeBase = airport.icao))
     }
-
-    // ── Legacy import ───────────────────────────────────────────────────────────
-
-    fun importLegacyJson(context: Context, uri: Uri) {
-        if (_state.value.isImporting) return
-        _state.update { it.copy(isImporting = true, importResult = null, importError = null) }
-        viewModelScope.launch {
-            try {
-                val result = importLegacy(context, uri)
-                _state.update { it.copy(isImporting = false, importResult = result) }
-            } catch (e: Exception) {
-                _state.update {
-                    it.copy(isImporting = false, importError = e.message ?: "Import failed")
-                }
-            }
-        }
-    }
-
-    fun clearResult() = _state.update { it.copy(importResult = null, importError = null) }
 
     // ── Backup: flights CSV + reference JSON ──────────────────────────────────────
 

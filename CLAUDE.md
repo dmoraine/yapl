@@ -40,9 +40,9 @@ Hilt for DI, Room for persistence, `kotlinx-datetime` for dates.
   and exports match `*-flights.csv` / `yapl-logbook*.pdf`. **Run `git status` before
   every commit** and confirm no flight data is staged.
 - **Anchor `.gitignore` patterns with a leading `/`.** A bare `legacy/` once also
-  matched the source package `app/src/.../usecase/legacy/` and silently dropped
-  `ImportLegacyFlightsUseCase.kt` from the repo, breaking F-Droid's clean build.
-  Use `/legacy/` (repo-root only).
+  matched a source package of the same name and silently dropped its `.kt` file from
+  the repo, breaking F-Droid's clean build. That package is gone now, but the trap is
+  the pattern, not the file: use `/legacy/` (repo-root only).
 - **Stay permission-free and offline.** No Android permissions, no network code, no
   analytics/ads/trackers — this is required for F-Droid.
 - **Database changes:** bump the Room `version`, add a `Migration`, register it in
