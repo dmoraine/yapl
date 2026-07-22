@@ -2,6 +2,7 @@
 // Copyright (C) 2026 Didier Moraine
 package dev.pilotlog.ui.screen.addedit
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -23,6 +24,7 @@ import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.NightsStay
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material.icons.filled.WbSunny
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -56,6 +58,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.input.KeyboardType
@@ -292,6 +295,9 @@ fun AddEditFlightScreen(
                 byMe = state.takeoffByMe,
                 isNight = state.depIsNight,
                 onChange = viewModel::onTakeoffByMeChange,
+                day = state.takeoffsDay,
+                night = state.takeoffsNight,
+                onCountsChange = viewModel::onTakeoffCountsChange,
             )
             Spacer(Modifier.height(4.dp))
             OperationToggle(
@@ -299,6 +305,9 @@ fun AddEditFlightScreen(
                 byMe = state.landingByMe,
                 isNight = state.arrIsNight,
                 onChange = viewModel::onLandingByMeChange,
+                day = state.landingsDay,
+                night = state.landingsNight,
+                onCountsChange = viewModel::onLandingCountsChange,
             )
 
             SectionDivider()
@@ -625,29 +634,84 @@ private fun OperationToggle(
     byMe: Boolean,
     isNight: Boolean?,
     onChange: (Boolean) -> Unit,
+    day: Int,
+    night: Int,
+    onCountsChange: (Int, Int) -> Unit,
 ) {
-    Row(
-        modifier = Modifier.fillMaxWidth(),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(label, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
-        if (byMe) {
-            val night = isNight == true
-            Icon(
-                imageVector = if (night) Icons.Filled.NightsStay else Icons.Filled.WbSunny,
-                contentDescription = null,
-                tint = if (night) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.tertiary,
-                modifier = Modifier.size(18.dp),
-            )
-            Spacer(Modifier.width(6.dp))
-            Text(
-                text = if (night) "Night" else "Day",
-                style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Spacer(Modifier.width(12.dp))
+    // Airline flying is one take-off and one landing, so the counters stay folded away
+    // until asked for — or until the stored counts can only have come from circuits.
+    var expanded by remember { mutableStateOf(false) }
+    val showCounters = byMe && (expanded || day + night > 1)
+
+    Column(modifier = Modifier.fillMaxWidth()) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(label, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+            if (byMe) {
+                val isNightOp = isNight == true
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier
+                        .clip(MaterialTheme.shapes.small)
+                        .clickable { expanded = !expanded }
+                        .padding(horizontal = 6.dp, vertical = 4.dp),
+                ) {
+                    Icon(
+                        imageVector = if (isNightOp) Icons.Filled.NightsStay else Icons.Filled.WbSunny,
+                        contentDescription = null,
+                        tint = if (isNightOp) MaterialTheme.colorScheme.secondary
+                        else MaterialTheme.colorScheme.tertiary,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    Text(
+                        text = if (day + night > 1) "$day day / $night night"
+                        else if (isNightOp) "Night" else "Day",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Spacer(Modifier.width(12.dp))
+            }
+            Switch(checked = byMe, onCheckedChange = onChange)
         }
-        Switch(checked = byMe, onCheckedChange = onChange)
+        if (showCounters) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 8.dp, top = 4.dp, bottom = 4.dp),
+                horizontalArrangement = Arrangement.spacedBy(20.dp),
+            ) {
+                CountStepper("Day", day) { onCountsChange(it, night) }
+                CountStepper("Night", night) { onCountsChange(day, it) }
+            }
+        }
+    }
+}
+
+/** Compact −/+ counter for take-offs and landings (circuits, multiple legs). */
+@Composable
+private fun CountStepper(label: String, value: Int, onChange: (Int) -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            label,
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.width(4.dp))
+        IconButton(onClick = { onChange(value - 1) }, enabled = value > 0) {
+            Icon(Icons.Filled.Remove, contentDescription = "$label minus one", Modifier.size(18.dp))
+        }
+        Text(
+            value.toString(),
+            style = MaterialTheme.typography.bodyMedium,
+            fontWeight = FontWeight.SemiBold,
+        )
+        IconButton(onClick = { onChange(value + 1) }) {
+            Icon(Icons.Filled.Add, contentDescription = "$label plus one", Modifier.size(18.dp))
+        }
     }
 }
 

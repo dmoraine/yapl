@@ -90,6 +90,10 @@ data class FlightFormState(
     val landingsNight: Int = 0,
     val takeoffByMe: Boolean = true,
     val landingByMe: Boolean = true,
+    // Set once the pilot enters counts himself (circuits, multiple legs logged as one
+    // line): the automatic day/night classification then stops overwriting them.
+    val takeoffsManual: Boolean = false,
+    val landingsManual: Boolean = false,
     val depIsNight: Boolean? = null,   // null = unknown (no coords / no time yet)
     val arrIsNight: Boolean? = null,
 
@@ -235,7 +239,7 @@ class AddEditFlightViewModel @Inject constructor(
                     landingByMe = (flight.landingsDay + flight.landingsNight) > 0,
                     flightNumber = flight.flightNumber,
                     remarks = flight.remarks,
-                ).classifyNight()   // display day/night, keep stored counts
+                ).initOps()   // display day/night, keep stored counts, detect overrides
             }
         }
     }
@@ -370,18 +374,64 @@ class AddEditFlightViewModel @Inject constructor(
         return copy(depIsNight = depN, arrIsNight = arrN)
     }
 
-    /** Turn the "by me" toggles + night classification into the day/night counts. */
-    private fun FlightFormState.applyOps(): FlightFormState = copy(
-        takeoffsNight = if (takeoffByMe && depIsNight == true) 1 else 0,
-        takeoffsDay   = if (takeoffByMe && depIsNight != true) 1 else 0,
-        landingsNight = if (landingByMe && arrIsNight == true) 1 else 0,
-        landingsDay   = if (landingByMe && arrIsNight != true) 1 else 0,
-    )
+    /**
+     * Turn the "by me" toggles + night classification into the day/night counts.
+     *
+     * Counts the pilot typed himself are left alone: this runs on every date, airport
+     * and time change, so recomputing them would silently reset a GA pilot's circuits
+     * back to a single landing.
+     */
+    private fun FlightFormState.applyOps(): FlightFormState {
+        var s = this
+        if (!takeoffsManual) s = s.copy(
+            takeoffsNight = if (takeoffByMe && depIsNight == true) 1 else 0,
+            takeoffsDay   = if (takeoffByMe && depIsNight != true) 1 else 0,
+        )
+        if (!landingsManual) s = s.copy(
+            landingsNight = if (landingByMe && arrIsNight == true) 1 else 0,
+            landingsDay   = if (landingByMe && arrIsNight != true) 1 else 0,
+        )
+        return s
+    }
 
     private fun FlightFormState.recomputeOps(): FlightFormState = classifyNight().applyOps()
 
-    fun onTakeoffByMeChange(v: Boolean) = _state.update { it.copy(takeoffByMe = v).recomputeOps() }
-    fun onLandingByMeChange(v: Boolean) = _state.update { it.copy(landingByMe = v).recomputeOps() }
+    /**
+     * Seed the manual flags when opening an existing flight, by asking whether the
+     * stored counts are what the automatic classification would have produced. A
+     * disagreement means the pilot decided — so the flag needs no database column.
+     */
+    private fun FlightFormState.initOps(): FlightFormState {
+        val classified = classifyNight()
+        val auto = classified.copy(takeoffsManual = false, landingsManual = false).applyOps()
+        return classified.copy(
+            takeoffsManual = auto.takeoffsDay != takeoffsDay || auto.takeoffsNight != takeoffsNight,
+            landingsManual = auto.landingsDay != landingsDay || auto.landingsNight != landingsNight,
+        )
+    }
+
+    // The switch is the "let the app decide" control, so flipping it hands back control.
+    fun onTakeoffByMeChange(v: Boolean) =
+        _state.update { it.copy(takeoffByMe = v, takeoffsManual = false).recomputeOps() }
+
+    fun onLandingByMeChange(v: Boolean) =
+        _state.update { it.copy(landingByMe = v, landingsManual = false).recomputeOps() }
+
+    fun onTakeoffCountsChange(day: Int, night: Int) = _state.update {
+        it.copy(
+            takeoffsDay = day.coerceIn(0, MAX_OPS),
+            takeoffsNight = night.coerceIn(0, MAX_OPS),
+            takeoffsManual = true,
+        )
+    }
+
+    fun onLandingCountsChange(day: Int, night: Int) = _state.update {
+        it.copy(
+            landingsDay = day.coerceIn(0, MAX_OPS),
+            landingsNight = night.coerceIn(0, MAX_OPS),
+            landingsManual = true,
+        )
+    }
 
     // ── Times ─────────────────────────────────────────────────────────────────
 
@@ -520,5 +570,8 @@ class AddEditFlightViewModel @Inject constructor(
     private companion object {
         /** Beyond this gap since the last flight, prefill departure with home base. */
         const val MAX_TURNAROUND_DAYS = 3
+
+        /** Upper bound per take-off/landing counter — a full day of circuits, not a typo. */
+        const val MAX_OPS = 99
     }
 }
