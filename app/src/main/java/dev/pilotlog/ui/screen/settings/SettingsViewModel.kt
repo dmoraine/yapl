@@ -11,6 +11,7 @@ import dev.pilotlog.domain.model.Airport
 import dev.pilotlog.domain.model.DateFormat
 import dev.pilotlog.domain.model.PilotRole
 import dev.pilotlog.domain.model.UserSettings
+import dev.pilotlog.domain.usecase.airport.GetAirportByIcaoUseCase
 import dev.pilotlog.domain.usecase.airport.SearchAirportsUseCase
 import dev.pilotlog.domain.usecase.backup.ExportFlightsCsvUseCase
 import dev.pilotlog.domain.usecase.backup.ExportLogbookPdfUseCase
@@ -32,6 +33,7 @@ import javax.inject.Inject
 data class SettingsUiState(
     val settings: UserSettings = UserSettings(),
     val homeBaseQuery: String = "",
+    val homeBaseAirport: Airport? = null,
     val homeBaseSuggestions: List<Airport> = emptyList(),
     val isImporting: Boolean = false,
     val importResult: ImportResult? = null,
@@ -47,6 +49,7 @@ class SettingsViewModel @Inject constructor(
     private val getSettings: GetSettingsUseCase,
     private val saveSettings: SaveSettingsUseCase,
     private val searchAirports: SearchAirportsUseCase,
+    private val getAirportByIcao: GetAirportByIcaoUseCase,
     private val exportFlightsCsv: ExportFlightsCsvUseCase,
     private val importFlightsCsv: ImportFlightsCsvUseCase,
     private val exportReferenceJson: ExportReferenceJsonUseCase,
@@ -61,7 +64,8 @@ class SettingsViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             val s = getSettings()
-            _state.update { it.copy(settings = s, homeBaseQuery = s.homeBase) }
+            val airport = s.homeBase.takeIf { it.isNotBlank() }?.let { getAirportByIcao(it) }
+            _state.update { it.copy(settings = s, homeBaseQuery = s.homeBase, homeBaseAirport = airport) }
         }
     }
 
@@ -77,18 +81,33 @@ class SettingsViewModel @Inject constructor(
     fun onDateFormatChange(format: DateFormat) = persist(_state.value.settings.copy(dateFormat = format))
 
     fun onHomeBaseQueryChange(query: String) {
-        _state.update { it.copy(homeBaseQuery = query) }
-        if (query.length >= 2) {
-            viewModelScope.launch {
-                _state.update { it.copy(homeBaseSuggestions = searchAirports(query)) }
-            }
-        } else {
+        _state.update { it.copy(homeBaseQuery = query, homeBaseAirport = null) }
+        if (query.length < 2) {
             _state.update { it.copy(homeBaseSuggestions = emptyList()) }
+            return
+        }
+        viewModelScope.launch {
+            // A full ICAO typed without touching the dropdown still counts as a choice —
+            // resolving it silently but not saving it would be worse than not resolving.
+            if (query.length == 4 && query.all { it.isLetter() }) {
+                val exact = getAirportByIcao(query)
+                if (exact != null) {
+                    onHomeBaseSelected(exact)
+                    return@launch
+                }
+            }
+            _state.update { it.copy(homeBaseSuggestions = searchAirports(query)) }
         }
     }
 
     fun onHomeBaseSelected(airport: Airport) {
-        _state.update { it.copy(homeBaseQuery = airport.icao, homeBaseSuggestions = emptyList()) }
+        _state.update {
+            it.copy(
+                homeBaseQuery = airport.icao,
+                homeBaseAirport = airport,
+                homeBaseSuggestions = emptyList(),
+            )
+        }
         persist(_state.value.settings.copy(homeBase = airport.icao))
     }
 

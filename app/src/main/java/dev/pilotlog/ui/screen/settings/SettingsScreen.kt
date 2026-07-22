@@ -144,6 +144,7 @@ fun SettingsScreen(
                     suggestions = state.homeBaseSuggestions,
                     onAirportSelected = viewModel::onHomeBaseSelected,
                     label = "Home base",
+                    selected = state.homeBaseAirport,
                     modifier = Modifier.fillMaxWidth(),
                 )
                 Spacer(Modifier.height(12.dp))

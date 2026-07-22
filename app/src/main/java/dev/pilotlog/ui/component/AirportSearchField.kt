@@ -49,7 +49,8 @@ fun AirportSearchField(
     // A resolved code closes the dropdown silently, so name the match under the field —
     // otherwise "found it" and "cannot create it" look identical to the user.
     val resolved = selected?.let { "${it.name}, ${it.country}" }
-    val unmatched = selected == null && suggestions.isEmpty() && query.trim().length >= 2
+    // Tied to showAddRow: the message points at that row, so never say it without one.
+    val unmatched = showAddRow && suggestions.isEmpty()
     var expanded by remember { mutableStateOf(false) }
     expanded = suggestions.isNotEmpty() || showAddRow
 
